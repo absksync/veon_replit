@@ -6,24 +6,52 @@ import './App.css'
 function App() {
   const [isHovered, setIsHovered] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-  const [currentEmotion, setCurrentEmotion] = useState('normal') // normal, happy, sad, excited, angry
+  const [currentEmotion, setCurrentEmotion] = useState('normal') // All possible emotions
   const [inputText, setInputText] = useState('')
 
-  // Enhanced sentiment analysis function
+  // Comprehensive sentiment analysis function with all expressions
   const analyzeSentiment = (text) => {
     const lowerText = text.toLowerCase()
     
-    // Excited/Very Happy keywords - wide eyes, big smile
+    // Excited/Very Happy - wide eyes, big smile
     const excitedWords = ['amazing', 'awesome', 'great', 'love', 'wonderful', 'excited', 'fantastic', 
                           'excellent', 'yay', 'wow', 'incredible', 'outstanding', 'brilliant', 'superb',
-                          '!', '😄', '🎉', '❤️', 'best', 'perfect', 'beautiful']
+                          '😄', '🎉', '❤️', 'best', 'perfect', 'beautiful']
     
-    // Sad keywords - droopy eyes, frown
+    // Surprised/Shocked - very wide eyes, open mouth
+    const surprisedWords = ['surprised', 'shocking', 'omg', 'unbelievable', 'unexpected', 'whoa',
+                            'what', 'really', '😮', '😲', 'no way', 'seriously']
+    
+    // Confused/Puzzled - asymmetric eyes, wavy mouth
+    const confusedWords = ['confused', 'puzzled', 'unsure', "don't understand", 'what do you mean',
+                           'huh', 'weird', 'strange', '🤔', 'not sure', 'unclear']
+    
+    // Thinking/Pondering - slightly raised eyes, small mouth
+    const thinkingWords = ['thinking', 'consider', 'maybe', 'perhaps', 'wondering', 'hmm',
+                           'let me think', 'interesting', '🤔', 'contemplating', 'pondering']
+    
+    // Worried/Anxious - raised eyes, small frown
+    const worriedWords = ['worried', 'anxious', 'nervous', 'concerned', 'scared', 'afraid',
+                          'fear', 'stress', '😰', '😟', 'trouble', 'problem']
+    
+    // Sleepy/Tired - half-closed eyes, small mouth
+    const sleepyWords = ['tired', 'sleepy', 'exhausted', 'yawn', 'sleepy', 'drowsy',
+                         '😴', 'fatigue', 'weary', 'need sleep', 'bed']
+    
+    // Loving/Affectionate - heart eyes, big smile
+    const lovingWords = ['love you', 'adore', 'caring', 'sweet', 'darling', 'dear',
+                         '❤️', '😍', '🥰', 'affection', 'fond']
+    
+    // Laughing - closed eyes, huge smile
+    const laughingWords = ['haha', 'lol', 'lmao', 'rofl', 'hilarious', 'funny',
+                           '😂', '🤣', 'laughter', 'laughing']
+    
+    // Sad - droopy eyes, frown
     const sadWords = ['sad', 'sorry', 'depressed', 'unhappy', 'terrible', 'awful', 'crying', 
                       'hurt', 'miss', 'lonely', 'disappointed', 'upset', '😢', '😔', 'pain',
                       'lost', 'broken', 'devastated']
     
-    // Angry keywords - narrow eyes, straight mouth
+    // Angry - narrow eyes, gritted teeth
     const angryWords = ['angry', 'mad', 'furious', 'hate', 'annoyed', 'frustrated', 'irritated', 
                         'pissed', 'outraged', 'livid', '😠', '😡', 'damn', 'stupid', 'rage']
     
@@ -31,37 +59,60 @@ function App() {
     const happyWords = ['good', 'nice', 'fine', 'okay', 'pleasant', 'smile', 'glad', 'content',
                         'satisfied', 'cheerful', 'happy', '😊', 'thanks', 'appreciate']
     
-    // Count matches for each emotion
-    let excitedCount = 0
-    let sadCount = 0
-    let angryCount = 0
-    let happyCount = 0
+    // Mischievous/Playful - one eye wink, smirk
+    const mischievousWords = ['wink', 'playful', 'tease', 'joke', 'kidding', 'mischief',
+                              '😏', '😉', 'sneaky', 'naughty', 'cheeky']
     
-    excitedWords.forEach(word => {
-      if (lowerText.includes(word)) excitedCount++
-    })
-    sadWords.forEach(word => {
-      if (lowerText.includes(word)) sadCount++
-    })
-    angryWords.forEach(word => {
-      if (lowerText.includes(word)) angryCount++
-    })
-    happyWords.forEach(word => {
-      if (lowerText.includes(word)) happyCount++
-    })
+    // Embarrassed/Shy - small eyes, curved mouth
+    const embarrassedWords = ['embarrassed', 'shy', 'awkward', 'blush', 'oops',
+                              '😳', '😅', 'sorry about that', 'my bad']
+    
+    // Disgusted - squinted eyes, downturned mouth
+    const disgustedWords = ['disgusting', 'gross', 'yuck', 'eww', 'nasty', 'revolting',
+                            '🤢', '🤮', 'awful']
+    
+    // Proud/Confident - raised eyes, confident smile
+    const proudWords = ['proud', 'confident', 'accomplished', 'achievement', 'success',
+                        '😎', 'nailed it', 'crushed it', 'victory']
+    
+    // Count matches for each emotion
+    const emotionCounts = {
+      excited: 0, surprised: 0, confused: 0, thinking: 0, worried: 0,
+      sleepy: 0, loving: 0, laughing: 0, sad: 0, angry: 0,
+      happy: 0, mischievous: 0, embarrassed: 0, disgusted: 0, proud: 0
+    }
+    
+    excitedWords.forEach(word => { if (lowerText.includes(word)) emotionCounts.excited++ })
+    surprisedWords.forEach(word => { if (lowerText.includes(word)) emotionCounts.surprised++ })
+    confusedWords.forEach(word => { if (lowerText.includes(word)) emotionCounts.confused++ })
+    thinkingWords.forEach(word => { if (lowerText.includes(word)) emotionCounts.thinking++ })
+    worriedWords.forEach(word => { if (lowerText.includes(word)) emotionCounts.worried++ })
+    sleepyWords.forEach(word => { if (lowerText.includes(word)) emotionCounts.sleepy++ })
+    lovingWords.forEach(word => { if (lowerText.includes(word)) emotionCounts.loving++ })
+    laughingWords.forEach(word => { if (lowerText.includes(word)) emotionCounts.laughing++ })
+    sadWords.forEach(word => { if (lowerText.includes(word)) emotionCounts.sad++ })
+    angryWords.forEach(word => { if (lowerText.includes(word)) emotionCounts.angry++ })
+    happyWords.forEach(word => { if (lowerText.includes(word)) emotionCounts.happy++ })
+    mischievousWords.forEach(word => { if (lowerText.includes(word)) emotionCounts.mischievous++ })
+    embarrassedWords.forEach(word => { if (lowerText.includes(word)) emotionCounts.embarrassed++ })
+    disgustedWords.forEach(word => { if (lowerText.includes(word)) emotionCounts.disgusted++ })
+    proudWords.forEach(word => { if (lowerText.includes(word)) emotionCounts.proud++ })
     
     // Check for multiple exclamation marks (excitement)
-    if ((text.match(/!/g) || []).length >= 2) excitedCount += 2
+    if ((text.match(/!/g) || []).length >= 2) emotionCounts.excited += 2
     
-    // Determine emotion based on highest count
-    const maxCount = Math.max(excitedCount, sadCount, angryCount, happyCount)
+    // Check for question marks (confused/thinking)
+    if ((text.match(/\?/g) || []).length >= 2) emotionCounts.confused += 1
+    
+    // Find highest scoring emotion
+    const maxCount = Math.max(...Object.values(emotionCounts))
     
     if (maxCount === 0) return 'normal'
     
-    if (excitedCount === maxCount) return 'excited'
-    if (sadCount === maxCount) return 'sad'
-    if (angryCount === maxCount) return 'angry'
-    if (happyCount === maxCount) return 'happy'
+    // Return the emotion with highest count
+    for (const [emotion, count] of Object.entries(emotionCounts)) {
+      if (count === maxCount) return emotion
+    }
     
     return 'normal'
   }
@@ -81,33 +132,77 @@ function App() {
 
   // Face component that changes based on emotion
   const EmotionalFace = ({ emotion }) => {
-    // Eye shapes for different emotions - same size, different shapes
+    // Eye shapes for ALL emotions - same size, different shapes
     const getEyeShape = () => {
       switch(emotion) {
         case 'excited':
-          return { borderRadius: '50%', transform: 'scale(1)' } // Round excited eyes
+          return { borderRadius: '50%', transform: 'scale(1)', left: '50%', right: '50%' }
         case 'happy':
-          return { borderRadius: '50%', transform: 'scale(1)' } // Round happy eyes
+          return { borderRadius: '50%', transform: 'scale(1)', left: '50%', right: '50%' }
+        case 'surprised':
+          return { borderRadius: '50%', transform: 'scale(1.1)', left: '50%', right: '50%' } // Wide open
+        case 'confused':
+          return { borderRadius: '50%', transform: 'scale(1)', left: '45%', right: '55%' } // Asymmetric
+        case 'thinking':
+          return { borderRadius: '50%', transform: 'translateY(-5px)', left: '50%', right: '50%' } // Raised
+        case 'worried':
+          return { borderRadius: '50% 50% 40% 40% / 60% 60% 40% 40%', transform: 'scale(1)', left: '50%', right: '50%' } // Raised worried
+        case 'sleepy':
+          return { borderRadius: '50%', transform: 'scaleY(0.3)', left: '50%', right: '50%' } // Half closed
+        case 'loving':
+          return { borderRadius: '50%', transform: 'scale(1)', left: '50%', right: '50%' } // Heart shape (will add hearts)
+        case 'laughing':
+          return { borderRadius: '50%', transform: 'scaleY(0.4)', left: '50%', right: '50%' } // Squinting from laughing
         case 'sad':
-          return { borderRadius: '50% 50% 50% 50% / 40% 40% 60% 60%', transform: 'scale(1)' } // Teardrop shape
+          return { borderRadius: '50% 50% 50% 50% / 40% 40% 60% 60%', transform: 'scale(1)', left: '50%', right: '50%' } // Teardrop
         case 'angry':
-          return { borderRadius: '50% 50% 50% 50% / 30% 30% 70% 70%', transform: 'scaleY(0.7)' } // Squinted/narrow
+          return { borderRadius: '50% 50% 50% 50% / 30% 30% 70% 70%', transform: 'scaleY(0.7)', left: '50%', right: '50%' } // Narrow
+        case 'mischievous':
+          return { borderRadius: '50%', transform: 'scale(1)', left: '80%', right: '30%' } // Wink (left closed, right open)
+        case 'embarrassed':
+          return { borderRadius: '50%', transform: 'scale(0.85)', left: '50%', right: '50%' } // Small shy eyes
+        case 'disgusted':
+          return { borderRadius: '50%', transform: 'scaleY(0.6)', left: '50%', right: '50%' } // Squinted disgust
+        case 'proud':
+          return { borderRadius: '50%', transform: 'scale(1)', left: '50%', right: '50%' } // Confident eyes
         default:
-          return { borderRadius: '50%', transform: 'scale(1)' } // Normal round
+          return { borderRadius: '50%', transform: 'scale(1)', left: '50%', right: '50%' }
       }
     }
 
-    // Mouth SVG paths for different emotions
+    // Mouth SVG paths for ALL emotions
     const getMouthPath = () => {
       switch(emotion) {
         case 'excited':
           return "M 20 5 Q 100 70, 180 5" // Big excited smile
         case 'happy':
           return "M 20 20 Q 100 50, 180 20" // Normal smile
+        case 'surprised':
+          return "M 60 25 Q 100 60, 140 25 Q 100 50, 60 25" // Open O mouth
+        case 'confused':
+          return "M 20 30 Q 60 35, 100 25 Q 140 35, 180 30" // Wavy confused
+        case 'thinking':
+          return "M 40 30 L 160 30" // Small straight line
+        case 'worried':
+          return "M 20 40 Q 100 25, 180 40" // Worried frown
+        case 'sleepy':
+          return "M 60 30 Q 100 40, 140 30" // Small yawn
+        case 'loving':
+          return "M 20 15 Q 100 60, 180 15" // Big warm smile
+        case 'laughing':
+          return "M 20 5 Q 100 75, 180 5" // Huge laugh
         case 'sad':
           return "M 20 45 Q 100 10, 180 45" // Sad frown
         case 'angry':
-          return "M 20 30 L 80 30 M 120 30 L 180 30" // Angry gritted teeth
+          return "M 20 30 L 80 30 M 120 30 L 180 30" // Gritted teeth
+        case 'mischievous':
+          return "M 20 25 Q 60 35, 100 30 Q 140 25, 180 20" // Smirk
+        case 'embarrassed':
+          return "M 40 35 Q 100 45, 160 35" // Small shy smile
+        case 'disgusted':
+          return "M 20 35 Q 60 25, 100 30 Q 140 25, 180 35" // Downturned disgust
+        case 'proud':
+          return "M 20 25 Q 100 45, 180 25" // Confident smile
         default:
           return "M 20 30 Q 100 35, 180 30" // Neutral
       }
@@ -117,7 +212,7 @@ function App() {
 
     return (
       <>
-        {/* Two eyes - fixed size, only shape changes */}
+        {/* Two eyes - fixed size, shape changes based on emotion */}
         <div className="flex gap-24 mb-12 justify-center items-center">
           {/* Left eye */}
           <motion.div 
@@ -125,6 +220,7 @@ function App() {
             animate={{
               borderRadius: eyeShape.borderRadius,
               transform: eyeShape.transform,
+              scaleX: emotion === 'mischievous' ? 0.2 : 1, // Wink effect
             }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
           />
@@ -140,7 +236,15 @@ function App() {
           />
         </div>
 
-        {/* Mouth - only path changes */}
+        {/* Additional visual elements for special emotions */}
+        {emotion === 'loving' && (
+          <div className="flex justify-center gap-8 mb-4">
+            <span className="text-2xl">❤️</span>
+            <span className="text-2xl">❤️</span>
+          </div>
+        )}
+
+        {/* Mouth - path changes based on emotion */}
         <div className="flex justify-center">
           <svg width="200" height="80" viewBox="0 0 200 80" className="mx-auto">
             <motion.path
