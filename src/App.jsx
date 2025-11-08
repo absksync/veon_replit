@@ -81,72 +81,67 @@ function App() {
 
   // Face component that changes based on emotion
   const EmotionalFace = ({ emotion }) => {
-    // Eye configurations for different emotions (matching the image reference)
-    const getEyeStyle = () => {
+    // Eye shapes for different emotions - same size, different shapes
+    const getEyeShape = () => {
       switch(emotion) {
         case 'excited':
-          return { width: 28, height: 28, borderRadius: '50%' } // Wide excited eyes - bigger circles
+          return { borderRadius: '50%', transform: 'scale(1)' } // Round excited eyes
         case 'happy':
-          return { width: 20, height: 20, borderRadius: '50%' } // Normal happy eyes - standard circles
+          return { borderRadius: '50%', transform: 'scale(1)' } // Round happy eyes
         case 'sad':
-          return { width: 14, height: 24, borderRadius: '50% 50% 50% 50% / 60% 60% 40% 40%' } // Droopy teardrop shape
+          return { borderRadius: '50% 50% 50% 50% / 40% 40% 60% 60%', transform: 'scale(1)' } // Teardrop shape
         case 'angry':
-          return { width: 22, height: 16, borderRadius: '50%' } // Narrow wide eyes - squinted
+          return { borderRadius: '50% 50% 50% 50% / 30% 30% 70% 70%', transform: 'scaleY(0.7)' } // Squinted/narrow
         default:
-          return { width: 20, height: 20, borderRadius: '50%' } // Normal circular eyes
+          return { borderRadius: '50%', transform: 'scale(1)' } // Normal round
       }
     }
 
-    // Mouth SVG paths for different emotions (matching image reference)
+    // Mouth SVG paths for different emotions
     const getMouthPath = () => {
       switch(emotion) {
         case 'excited':
-          return "M 20 5 Q 100 70, 180 5" // Big wide excited smile - huge curve
+          return "M 20 5 Q 100 70, 180 5" // Big excited smile
         case 'happy':
-          return "M 20 20 Q 100 50, 180 20" // Normal happy smile - moderate curve
+          return "M 20 20 Q 100 50, 180 20" // Normal smile
         case 'sad':
-          return "M 20 45 Q 100 10, 180 45" // Deep sad frown - inverted curve
+          return "M 20 45 Q 100 10, 180 45" // Sad frown
         case 'angry':
-          return "M 20 30 L 80 30 M 120 30 L 180 30" // Angry gritted teeth - broken line
+          return "M 20 30 L 80 30 M 120 30 L 180 30" // Angry gritted teeth
         default:
-          return "M 20 30 Q 100 35, 180 30" // Neutral slight curve
+          return "M 20 30 Q 100 35, 180 30" // Neutral
       }
     }
 
-    const eyeStyle = getEyeStyle()
+    const eyeShape = getEyeShape()
 
     return (
       <>
-        {/* Two eyes with emotion-based shapes */}
+        {/* Two eyes - fixed size, only shape changes */}
         <div className="flex gap-24 mb-12 justify-center items-center">
           {/* Left eye */}
           <motion.div 
-            className="bg-veon-orange"
-            style={{ borderRadius: eyeStyle.borderRadius }}
+            className="bg-veon-orange w-20 h-20"
             animate={{
-              width: eyeStyle.width * 4,
-              height: eyeStyle.height * 4,
+              borderRadius: eyeShape.borderRadius,
+              transform: eyeShape.transform,
             }}
-            transition={{ duration: 0.4, ease: 'easeOut' }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
           />
 
           {/* Right eye */}
           <motion.div 
-            className="bg-veon-orange"
-            style={{ borderRadius: eyeStyle.borderRadius }}
+            className="bg-veon-orange w-20 h-20"
             animate={{
-              width: eyeStyle.width * 4,
-              height: eyeStyle.height * 4,
+              borderRadius: eyeShape.borderRadius,
+              transform: eyeShape.transform,
             }}
-            transition={{ duration: 0.4, ease: 'easeOut' }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
           />
         </div>
 
-        {/* Mouth with emotion-based curves */}
-        <motion.div 
-          className="flex justify-center"
-          initial={false}
-        >
+        {/* Mouth - only path changes */}
+        <div className="flex justify-center">
           <svg width="200" height="80" viewBox="0 0 200 80" className="mx-auto">
             <motion.path
               d={getMouthPath()}
@@ -154,22 +149,16 @@ function App() {
               strokeWidth="5"
               fill="none"
               strokeLinecap="round"
-              initial={false}
               animate={{ d: getMouthPath() }}
-              transition={{ duration: 0.4, ease: 'easeOut' }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
             />
           </svg>
-        </motion.div>
+        </div>
 
-        {/* Emotion label for user feedback */}
-        <motion.div 
-          className="text-center mt-2 text-veon-orange/60 text-sm font-light"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: emotion !== 'normal' ? 1 : 0.3 }}
-          transition={{ duration: 0.3 }}
-        >
+        {/* Emotion label */}
+        <div className="text-center mt-2 text-veon-orange/60 text-sm font-light">
           {emotion === 'normal' ? 'neutral' : emotion}
-        </motion.div>
+        </div>
       </>
     )
   }
@@ -249,17 +238,12 @@ function App() {
           transition={{ duration: 1.5, ease: 'easeOut' }}
           className="mb-16 relative"
         >
-          {/* Subtle ambient breathing aura */}
-          <motion.div
+          {/* Static ambient glow - no animation */}
+          <div
             className="absolute inset-0 -m-20 rounded-full opacity-20 blur-3xl"
             style={{
-              background: 'radial-gradient(circle, rgba(255,176,0,0.3) 0%, transparent 70%)',
+              background: 'radial-gradient(circle, rgba(255,176,0,0.2) 0%, transparent 70%)',
             }}
-            animate={{
-              scale: [1, 1.2, 1],
-              opacity: [0.15, 0.25, 0.15],
-            }}
-            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
           />
           <div className="relative">
             <EmotionalFace emotion={currentEmotion} />
@@ -285,38 +269,24 @@ function App() {
         >
           {/* Chat input container */}
           <div className="relative flex items-center gap-4">
-            {/* Text input */}
-            <motion.input
+            {/* Text input - static */}
+            <input
               type="text"
               placeholder="Type your message..."
               value={inputText}
               onChange={handleInputChange}
-              className="flex-1 bg-gray-900/50 backdrop-blur-sm border-2 border-gray-800 rounded-full px-8 py-5 text-white text-lg placeholder-gray-500 focus:outline-none focus:border-veon-orange transition-all"
-              whileFocus={{
-                boxShadow: '0 0 30px rgba(255,176,0,0.3)',
-                borderColor: 'rgba(255,176,0,0.8)',
-              }}
+              className="flex-1 bg-gray-900/50 backdrop-blur-sm border-2 border-gray-800 rounded-full px-8 py-5 text-white text-lg placeholder-gray-500 focus:outline-none focus:border-veon-orange transition-colors"
             />
 
-            {/* Mic button with breathing glow */}
+            {/* Mic button - static, no animation */}
             <motion.button
               className="relative w-16 h-16 rounded-full bg-veon-orange flex items-center justify-center"
-              whileHover={{ scale: 1.15 }}
-              whileTap={{ scale: 0.9 }}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
             >
-              {/* Breathing pulse on hover */}
-              <motion.div
-                className="absolute inset-0 rounded-full bg-veon-orange"
-                animate={{
-                  scale: [1, 1.3],
-                  opacity: [0.5, 0],
-                }}
-                transition={{ duration: 1.5, repeat: Infinity, ease: 'easeOut' }}
-              />
-              
               {/* Mic SVG icon */}
               <svg 
-                className="relative z-10 w-7 h-7 text-black" 
+                className="w-7 h-7 text-black" 
                 fill="currentColor" 
                 viewBox="0 0 24 24"
               >
