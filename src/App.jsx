@@ -1,25 +1,76 @@
 import { useState } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
+import { SignInButton, SignUpButton, SignedIn, SignedOut, UserButton } from '@clerk/clerk-react'
 import './App.css'
 
 function App() {
   const [isHovered, setIsHovered] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   return (
-    <div className="w-full min-h-screen bg-gradient-to-b from-black to-gray-900 flex flex-col items-center justify-center relative overflow-hidden">
+    <div className="w-full min-h-screen bg-black flex flex-col items-center justify-center relative overflow-hidden">
 
-      {/* Radial glow behind AI face */}
-      <motion.div
-        className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full opacity-20"
-        style={{
-          background: 'radial-gradient(circle, rgba(255,176,0,0.4) 0%, transparent 70%)',
-        }}
-        animate={{
-          scale: [1, 1.15, 1],
-          opacity: [0.15, 0.25, 0.15],
-        }}
-        transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-      />
+      {/* Hidden Menu in top-left corner */}
+      <div className="absolute top-6 left-6 z-50">
+        <motion.button
+          onClick={() => setMenuOpen(!menuOpen)}
+          className="w-10 h-10 flex items-center justify-center text-veon-orange hover:text-amber-500 transition-colors"
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </motion.button>
+
+        {/* Slide-out menu */}
+        <AnimatePresence>
+          {menuOpen && (
+            <motion.div
+              initial={{ x: -300, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: -300, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25 }}
+              className="absolute top-12 left-0 w-64 bg-black/90 backdrop-blur-md p-6 space-y-4"
+            >
+              <button className="w-full text-left text-veon-orange hover:bg-veon-orange hover:text-black px-4 py-3 rounded-lg transition-all">
+                About VEON
+              </button>
+              <button className="w-full text-left text-veon-orange hover:bg-veon-orange hover:text-black px-4 py-3 rounded-lg transition-all">
+                How it works
+              </button>
+              <button className="w-full text-left text-veon-orange hover:bg-veon-orange hover:text-black px-4 py-3 rounded-lg transition-all">
+                Settings
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Auth buttons in top right corner */}
+      <div className="absolute top-6 right-6 z-50 flex gap-3 items-center">
+        <SignedOut>
+          <SignInButton mode="modal">
+            <button className="px-6 py-2 rounded-full border-2 border-veon-orange text-veon-orange hover:bg-veon-orange hover:text-black transition-all">
+              Sign In
+            </button>
+          </SignInButton>
+          <SignUpButton mode="modal">
+            <button className="px-6 py-2 rounded-full bg-veon-orange text-black font-semibold hover:bg-amber-500 transition-all">
+              Sign Up
+            </button>
+          </SignUpButton>
+        </SignedOut>
+        <SignedIn>
+          <UserButton 
+            appearance={{
+              elements: {
+                avatarBox: "w-10 h-10"
+              }
+            }}
+          />
+        </SignedIn>
+      </div>
 
       {/* Main content container */}
       <div className="relative z-10 w-full flex flex-col items-center justify-center min-h-screen px-8">
@@ -29,8 +80,20 @@ function App() {
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 1.5, ease: 'easeOut' }}
-          className="mb-16"
+          className="mb-16 relative"
         >
+          {/* Subtle ambient breathing aura */}
+          <motion.div
+            className="absolute inset-0 -m-20 rounded-full opacity-20 blur-3xl"
+            style={{
+              background: 'radial-gradient(circle, rgba(255,176,0,0.3) 0%, transparent 70%)',
+            }}
+            animate={{
+              scale: [1, 1.2, 1],
+              opacity: [0.15, 0.25, 0.15],
+            }}
+            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+          />
           <div className="relative">
             {/* Two circular eyes */}
             <div className="flex gap-24 mb-12">
@@ -44,9 +107,6 @@ function App() {
               >
                 <div 
                   className="w-20 h-20 rounded-full bg-veon-orange"
-                  style={{ 
-                    boxShadow: '0 0 30px rgba(255,176,0,0.8), 0 0 50px rgba(255,176,0,0.4)',
-                  }}
                 />
               </motion.div>
 
@@ -60,9 +120,6 @@ function App() {
               >
                 <div 
                   className="w-20 h-20 rounded-full bg-veon-orange"
-                  style={{ 
-                    boxShadow: '0 0 30px rgba(255,176,0,0.8), 0 0 50px rgba(255,176,0,0.4)',
-                  }}
                 />
               </motion.div>
             </div>
@@ -82,14 +139,21 @@ function App() {
                   strokeWidth="4"
                   fill="none"
                   strokeLinecap="round"
-                  style={{
-                    filter: 'drop-shadow(0 0 12px rgba(255,176,0,0.7))'
-                  }}
                 />
               </svg>
             </motion.div>
           </div>
         </motion.div>
+
+        {/* Tagline - Poetic hint text */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0.6, 0.9, 0.6] }}
+          transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+          className="text-veon-orange/80 text-base mb-12 tracking-wide font-light"
+        >
+          VEON — Say hello… I'll remember you. For a while.
+        </motion.p>
 
         {/* Chat interface */}
         <motion.div
@@ -111,15 +175,25 @@ function App() {
               }}
             />
 
-            {/* Mic button */}
+            {/* Mic button with breathing glow */}
             <motion.button
-              className="relative w-16 h-16 rounded-full bg-gradient-to-br from-veon-orange to-amber-600 flex items-center justify-center"
-              whileHover={{ scale: 1.1 }}
+              className="relative w-16 h-16 rounded-full bg-veon-orange flex items-center justify-center"
+              whileHover={{ scale: 1.15 }}
               whileTap={{ scale: 0.9 }}
             >
+              {/* Breathing pulse on hover */}
+              <motion.div
+                className="absolute inset-0 rounded-full bg-veon-orange"
+                animate={{
+                  scale: [1, 1.3],
+                  opacity: [0.5, 0],
+                }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: 'easeOut' }}
+              />
+              
               {/* Mic SVG icon */}
               <svg 
-                className="w-7 h-7 text-black" 
+                className="relative z-10 w-7 h-7 text-black" 
                 fill="currentColor" 
                 viewBox="0 0 24 24"
               >
@@ -129,14 +203,6 @@ function App() {
             </motion.button>
           </div>
 
-          {/* Helper text */}
-          <motion.p
-            className="text-center text-gray-500 text-sm mt-4"
-            animate={{ opacity: [0.4, 0.7, 0.4] }}
-            transition={{ duration: 3, repeat: Infinity }}
-          >
-            Type or speak to begin your conversation
-          </motion.p>
         </motion.div>
 
       </div>
