@@ -1,0 +1,27 @@
+# Core backend dependencies
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+python-dotenv==1.0.0
+
+# Database
+sqlalchemy==2.0.23
+alembic==1.12.1
+aiosqlite==0.19.0
+
+# AI & LLM
+groq==0.4.1
+langchain==0.0.335
+langchain-groq==0.0.1
+tiktoken==0.5.1
+
+# Utilities
+pydantic==2.5.0
+httpx==0.25.1
+aiofiles==23.2.1
+
+# Voice/Audio processing (optional - can skip for now)
+# TTS==0.22.0
+# pydub==0.25.1
+# soundfile==0.12.1
+# numpy==1.24.3

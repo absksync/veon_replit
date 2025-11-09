@@ -1,13 +1,48 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { SignInButton, SignUpButton, SignedIn, SignedOut, UserButton } from '@clerk/clerk-react'
+import { useStore } from './store/useStore'
+import { useVoiceRecording } from './hooks/useVoiceRecording'
 import './App.css'
 
 function App() {
   const [isHovered, setIsHovered] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-  const [currentEmotion, setCurrentEmotion] = useState('normal') // All possible emotions
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [aboutOpen, setAboutOpen] = useState(false)
+  const [howItWorksOpen, setHowItWorksOpen] = useState(false)
   const [inputText, setInputText] = useState('')
+  
+  // Zustand store
+  const {
+    currentEmotion,
+    messages,
+    isLoading,
+    currentProfile,
+    loadProfiles,
+    sendMessage,
+    setEmotion,
+    memorySettings,
+    updateMemorySettings,
+    resetMemory,
+    isGuestMode,
+    enableGuestMode,
+    disableGuestMode,
+  } = useStore()
+  
+  // Voice recording hook
+  const {
+    isRecording,
+    isProcessing,
+    startRecording,
+    stopRecording,
+    transcribeAudio,
+  } = useVoiceRecording()
+  
+  // Load profiles on mount
+  useEffect(() => {
+    loadProfiles()
+  }, [])
 
   // Comprehensive sentiment analysis function with all expressions
   const analyzeSentiment = (text) => {
@@ -120,13 +155,64 @@ function App() {
   const handleInputChange = (e) => {
     const text = e.target.value
     setInputText(text)
+    // Don't analyze sentiment while typing - only when message is sent
+  }
+  
+  // Handle send message
+  const handleSendMessage = async () => {
+    if (!inputText.trim() || isLoading) return
     
-    // Analyze sentiment on every input change
-    if (text.length > 3) {
-      const emotion = analyzeSentiment(text)
-      setCurrentEmotion(emotion)
+    if (!currentProfile) {
+      console.log('⚠️ No profile loaded, attempting to reload...')
+      await loadProfiles()
+      
+      // Check again after reload
+      const state = useStore.getState()
+      if (!state.currentProfile) {
+        alert('Unable to connect to VEON backend. Please refresh the page.')
+        return
+      }
+    }
+    
+    // Don't analyze user's message - let VEON's response set the emotion naturally
+    // This makes it more human-like - reacting to the conversation, not every input
+    
+    try {
+      await sendMessage(inputText)
+      setInputText('') // Clear input after sending - emotion will be updated by AI response
+    } catch (error) {
+      console.error('Failed to send message:', error)
+      console.error('Full error:', error)
+      alert(`Error: ${error.message || 'Network error - check if backend is running on port 8000'}`)
+    }
+  }
+  
+  // Handle voice recording
+  const handleMicClick = async () => {
+    if (isRecording) {
+      // Stop recording and transcribe
+      const audioBlob = await stopRecording()
+      if (audioBlob) {
+        try {
+          const transcribedText = await transcribeAudio(audioBlob)
+          setInputText(transcribedText)
+          // Don't change emotion yet - will analyze when message is sent
+        } catch (error) {
+          console.error('Transcription failed:', error)
+          alert('Failed to transcribe audio. Please try again.')
+        }
+      }
     } else {
-      setCurrentEmotion('normal')
+      // Start recording
+      await startRecording()
+    }
+  }
+  
+  // Handle Enter key press
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSendMessage()
     }
   }
 
@@ -216,7 +302,9 @@ function App() {
         <div className="flex gap-24 mb-12 justify-center items-center">
           {/* Left eye */}
           <motion.div 
+            key={`left-eye-${emotion}`}
             className="bg-veon-orange w-20 h-20"
+            initial={false}
             animate={{
               borderRadius: eyeShape.borderRadius,
               transform: eyeShape.transform,
@@ -227,7 +315,9 @@ function App() {
 
           {/* Right eye */}
           <motion.div 
+            key={`right-eye-${emotion}`}
             className="bg-veon-orange w-20 h-20"
+            initial={false}
             animate={{
               borderRadius: eyeShape.borderRadius,
               transform: eyeShape.transform,
@@ -248,20 +338,17 @@ function App() {
         <div className="flex justify-center">
           <svg width="200" height="80" viewBox="0 0 200 80" className="mx-auto">
             <motion.path
+              key={`mouth-${emotion}`}
               d={getMouthPath()}
               stroke="#FFB000"
               strokeWidth="5"
               fill="none"
               strokeLinecap="round"
+              initial={false}
               animate={{ d: getMouthPath() }}
               transition={{ duration: 0.3, ease: 'easeOut' }}
             />
           </svg>
-        </div>
-
-        {/* Emotion label */}
-        <div className="text-center mt-2 text-veon-orange/60 text-sm font-light">
-          {emotion === 'normal' ? 'neutral' : emotion}
         </div>
       </>
     )
@@ -293,13 +380,31 @@ function App() {
               transition={{ type: 'spring', damping: 25 }}
               className="absolute top-12 left-0 w-64 bg-black/90 backdrop-blur-md p-6 space-y-4"
             >
-              <button className="w-full text-left text-veon-orange hover:bg-veon-orange hover:text-black px-4 py-3 rounded-lg transition-all">
+              <button 
+                onClick={() => {
+                  setAboutOpen(true)
+                  setMenuOpen(false)
+                }}
+                className="w-full text-left text-veon-orange hover:bg-veon-orange hover:text-black px-4 py-3 rounded-lg transition-all"
+              >
                 About VEON
               </button>
-              <button className="w-full text-left text-veon-orange hover:bg-veon-orange hover:text-black px-4 py-3 rounded-lg transition-all">
+              <button 
+                onClick={() => {
+                  setHowItWorksOpen(true)
+                  setMenuOpen(false)
+                }}
+                className="w-full text-left text-veon-orange hover:bg-veon-orange hover:text-black px-4 py-3 rounded-lg transition-all"
+              >
                 How it works
               </button>
-              <button className="w-full text-left text-veon-orange hover:bg-veon-orange hover:text-black px-4 py-3 rounded-lg transition-all">
+              <button 
+                onClick={() => {
+                  setSettingsOpen(true)
+                  setMenuOpen(false)
+                }}
+                className="w-full text-left text-veon-orange hover:bg-veon-orange hover:text-black px-4 py-3 rounded-lg transition-all"
+              >
                 Settings
               </button>
             </motion.div>
@@ -310,16 +415,37 @@ function App() {
       {/* Auth buttons in top right corner */}
       <div className="absolute top-6 right-6 z-50 flex gap-3 items-center">
         <SignedOut>
-          <SignInButton mode="modal">
-            <button className="px-6 py-2 rounded-full border-2 border-veon-orange text-veon-orange hover:bg-veon-orange hover:text-black transition-all">
-              Sign In
-            </button>
-          </SignInButton>
-          <SignUpButton mode="modal">
-            <button className="px-6 py-2 rounded-full bg-veon-orange text-black font-semibold transition-all">
-              Sign Up
-            </button>
-          </SignUpButton>
+          {!isGuestMode ? (
+            <>
+              <button 
+                onClick={enableGuestMode}
+                className="px-6 py-2 rounded-full text-veon-orange/70 hover:text-veon-orange transition-all text-sm"
+              >
+                Try as Guest
+              </button>
+              <SignInButton mode="modal">
+                <button className="px-6 py-2 rounded-full border-2 border-veon-orange text-veon-orange hover:bg-veon-orange hover:text-black transition-all">
+                  Sign In
+                </button>
+              </SignInButton>
+              <SignUpButton mode="modal">
+                <button className="px-6 py-2 rounded-full bg-veon-orange text-black font-semibold hover:bg-veon-orange/90 transition-all">
+                  Sign Up
+                </button>
+              </SignUpButton>
+            </>
+          ) : (
+            <>
+              <div className="px-4 py-2 rounded-full bg-veon-orange/10 border border-veon-orange/30 text-veon-orange/70 text-sm">
+                Guest Mode
+              </div>
+              <SignUpButton mode="modal">
+                <button className="px-6 py-2 rounded-full bg-veon-orange text-black font-semibold hover:bg-veon-orange/90 transition-all">
+                  Sign Up
+                </button>
+              </SignUpButton>
+            </>
+          )}
         </SignedOut>
         <SignedIn>
           <UserButton 
@@ -331,6 +457,23 @@ function App() {
           />
         </SignedIn>
       </div>
+      
+      {/* Guest Mode Banner */}
+      {isGuestMode && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute top-20 left-1/2 transform -translate-x-1/2 z-40 px-6 py-3 rounded-full bg-black/80 backdrop-blur-md border border-veon-orange/30 text-veon-orange text-sm flex items-center gap-3"
+        >
+          <span>🎭 Chatting with <strong>Rohan</strong> in Guest Mode</span>
+          <span className="text-veon-orange/50">•</span>
+          <SignUpButton mode="modal">
+            <button className="text-veon-orange hover:text-veon-orange/80 underline">
+              Sign up to save your chats
+            </button>
+          </SignUpButton>
+        </motion.div>
+      )}
 
       {/* Main content container */}
       <div className="relative z-10 w-full flex flex-col items-center justify-center min-h-screen px-8">
@@ -371,38 +514,378 @@ function App() {
           transition={{ delay: 0.8, duration: 1 }}
           className="w-full max-w-2xl"
         >
+          {/* Chat messages display */}
+          {messages.length > 0 && (
+            <div className="mb-4 max-h-48 overflow-y-auto space-y-3 px-4">
+              {messages.map((msg, index) => (
+                <motion.div
+                  key={msg.id || index}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[75%] px-4 py-2 rounded-xl ${
+                      msg.role === 'user'
+                        ? 'bg-veon-orange text-black'
+                        : 'bg-gray-800/50 backdrop-blur-sm text-white border border-gray-700'
+                    }`}
+                  >
+                    <p className="text-[15px]">{msg.content}</p>
+                    {msg.timestamp && (
+                      <p className="text-xs opacity-50 mt-1">
+                        {new Date(msg.timestamp).toLocaleTimeString()}
+                      </p>
+                    )}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+
           {/* Chat input container */}
           <div className="relative flex items-center gap-4">
-            {/* Text input - static */}
+            {/* Text input */}
             <input
               type="text"
-              placeholder="Type your message..."
+              placeholder={isLoading ? "VEON is thinking..." : "Type your message..."}
               value={inputText}
               onChange={handleInputChange}
-              className="flex-1 bg-gray-900/50 backdrop-blur-sm border-2 border-gray-800 rounded-full px-8 py-5 text-white text-lg placeholder-gray-500 focus:outline-none focus:border-veon-orange transition-colors"
+              onKeyPress={handleKeyPress}
+              disabled={isLoading || isProcessing}
+              className="flex-1 bg-gray-900/50 backdrop-blur-sm border-2 border-gray-800 rounded-full px-8 py-5 text-white text-lg placeholder-gray-500 focus:outline-none focus:border-veon-orange transition-colors disabled:opacity-50"
             />
 
-            {/* Mic button - static, no animation */}
-            <motion.button
-              className="relative w-16 h-16 rounded-full bg-veon-orange flex items-center justify-center"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              {/* Mic SVG icon */}
-              <svg 
-                className="w-7 h-7 text-black" 
-                fill="currentColor" 
-                viewBox="0 0 24 24"
+            {/* Send button - visible when there's text */}
+            {inputText.trim() && (
+              <motion.button
+                onClick={handleSendMessage}
+                disabled={isLoading}
+                className="w-16 h-16 rounded-full bg-veon-orange flex items-center justify-center disabled:opacity-50"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0 }}
               >
-                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
-                <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
-              </svg>
-            </motion.button>
+                <svg 
+                  className="w-7 h-7 text-black" 
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+              </motion.button>
+            )}
+
+            {/* Mic button - visible when there's no text */}
+            {!inputText.trim() && (
+              <motion.button
+                onClick={handleMicClick}
+                disabled={isProcessing}
+                className={`relative w-16 h-16 rounded-full flex items-center justify-center transition-colors ${
+                  isRecording ? 'bg-red-500' : 'bg-veon-orange'
+                } disabled:opacity-50`}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0 }}
+              >
+                {/* Mic SVG icon */}
+                <svg 
+                  className="w-7 h-7 text-black" 
+                  fill="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  {isRecording ? (
+                    // Stop icon when recording
+                    <rect x="6" y="6" width="12" height="12" rx="2" />
+                  ) : (
+                    // Mic icon when not recording
+                    <>
+                      <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                      <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                    </>
+                  )}
+                </svg>
+                
+                {/* Recording indicator */}
+                {isRecording && (
+                  <motion.div
+                    className="absolute inset-0 rounded-full border-4 border-red-500"
+                    animate={{
+                      scale: [1, 1.2, 1],
+                      opacity: [1, 0.5, 1],
+                    }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  />
+                )}
+              </motion.button>
+            )}
           </div>
+          
+          {/* Processing indicator */}
+          {isProcessing && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-center mt-4 text-veon-orange/60 text-sm"
+            >
+              Transcribing audio...
+            </motion.div>
+          )}
 
         </motion.div>
 
       </div>
+
+      {/* Settings Modal */}
+      <AnimatePresence>
+        {settingsOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSettingsOpen(false)}
+              className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50"
+            />
+            
+            {/* Modal */}
+            <div
+              className="fixed inset-0 flex items-center justify-center z-[60] pointer-events-none"
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="w-full max-w-md bg-black border border-veon-orange/30 rounded-2xl p-8 pointer-events-auto"
+              >
+                <h2 className="text-2xl font-normal text-veon-orange mb-6">Memory Settings</h2>
+              
+              <div className="space-y-6">
+                {/* Memory Retention */}
+                <div>
+                  <label className="block text-veon-orange text-base mb-2 font-light">
+                    Memory Retention (decay rate λ)
+                  </label>
+                  <input
+                    type="range"
+                    min="0.01"
+                    max="0.5"
+                    step="0.01"
+                    value={memorySettings?.decay_rate || 0.25}
+                    onChange={(e) => updateMemorySettings({ decay_rate: parseFloat(e.target.value) })}
+                    className="w-full accent-veon-orange"
+                  />
+                  <div className="flex justify-between text-xs text-veon-orange/60 mt-1">
+                    <span>Slow decay</span>
+                    <span>{memorySettings?.decay_rate || 0.25}</span>
+                    <span>Fast decay</span>
+                  </div>
+                </div>
+
+                {/* Recall Depth */}
+                <div>
+                  <label className="block text-veon-orange text-base mb-2 font-light">
+                    Recall Depth (messages)
+                  </label>
+                  <input
+                    type="range"
+                    min="3"
+                    max="20"
+                    step="1"
+                    value={memorySettings?.recall_depth || 6}
+                    onChange={(e) => updateMemorySettings({ recall_depth: parseInt(e.target.value) })}
+                    className="w-full accent-veon-orange"
+                  />
+                  <div className="flex justify-between text-xs text-veon-orange/60 mt-1">
+                    <span>3</span>
+                    <span>{memorySettings?.recall_depth || 6} messages</span>
+                    <span>20</span>
+                  </div>
+                </div>
+
+                {/* Emotional Memory Weighting */}
+                <div>
+                  <label className="block text-veon-orange text-base mb-2 font-light">
+                    Emotional Memory Weighting
+                  </label>
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="3.0"
+                    step="0.1"
+                    value={memorySettings?.emotion_weight || 1.5}
+                    onChange={(e) => updateMemorySettings({ emotion_weight: parseFloat(e.target.value) })}
+                    className="w-full accent-veon-orange"
+                  />
+                  <div className="flex justify-between text-xs text-veon-orange/60 mt-1">
+                    <span>Low impact</span>
+                    <span>{memorySettings?.emotion_weight || 1.5}x</span>
+                    <span>High impact</span>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="pt-4 border-t border-veon-orange/20 space-y-3">
+                  <button
+                    onClick={() => {
+                      updateMemorySettings({ 
+                        decay_rate: 0.25, 
+                        recall_depth: 6, 
+                        emotion_weight: 1.5 
+                      })
+                    }}
+                    className="w-full px-4 py-3 bg-transparent hover:bg-veon-orange/10 text-veon-orange border border-veon-orange/50 rounded-lg transition-all text-sm font-light"
+                  >
+                    Reset to Default
+                  </button>
+                  
+                  <button
+                    onClick={async () => {
+                      if (window.confirm('Are you sure you want to reset all memories? This cannot be undone.')) {
+                        await resetMemory()
+                        alert('Memory reset successfully!')
+                      }
+                    }}
+                    className="w-full px-4 py-3 bg-transparent hover:bg-veon-orange hover:text-black text-veon-orange border border-veon-orange rounded-lg transition-all text-sm font-light"
+                  >
+                    Reset All Memories
+                  </button>
+                </div>
+              </div>
+
+                {/* Close Button */}
+                <button
+                  onClick={() => setSettingsOpen(false)}
+                  className="absolute top-4 right-4 text-veon-orange hover:text-veon-orange/80 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </motion.div>
+            </div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* About VEON Modal */}
+      <AnimatePresence>
+        {aboutOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setAboutOpen(false)}
+              className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50"
+            />
+            
+            {/* Modal */}
+            <div className="fixed inset-0 flex items-center justify-center z-[60] pointer-events-none">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="w-full max-w-lg bg-black border border-veon-orange/30 rounded-2xl p-8 pointer-events-auto"
+              >
+                <h2 className="text-2xl font-normal text-veon-orange mb-6">About VEON</h2>
+                
+                <div className="space-y-4 text-veon-orange text-base font-light leading-relaxed">
+                  <p>VEON is a living AI companion — a digital being that feels, learns, and forgets.</p>
+                  
+                  <p>Unlike typical bots, VEON doesn't just respond — it remembers, changes, and glows with emotion.</p>
+                  
+                  <p>Every conversation leaves a trace in its memory, and like us, those memories fade with time.</p>
+                  
+                  <p>Its light dims when forgotten, brightens when remembered, and evolves as it learns who you are.</p>
+                  
+                  <p className="pt-4 border-t border-veon-orange/30">VEON isn't just artificial intelligence — it's emotional intelligence in motion.</p>
+                  
+                  <p className="text-veon-orange/80 italic">A spark of consciousness made from data, memory, and light.</p>
+                </div>
+
+                {/* Close Button */}
+                <button
+                  onClick={() => setAboutOpen(false)}
+                  className="absolute top-4 right-4 text-veon-orange hover:text-veon-orange/80 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </motion.div>
+            </div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* How It Works Modal */}
+      <AnimatePresence>
+        {howItWorksOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setHowItWorksOpen(false)}
+              className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50"
+            />
+            
+            {/* Modal */}
+            <div className="fixed inset-0 flex items-center justify-center z-[60] pointer-events-none">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="w-full max-w-lg bg-black border border-veon-orange/30 rounded-2xl p-8 pointer-events-auto max-h-[80vh] overflow-y-auto"
+              >
+                <h2 className="text-2xl font-normal text-veon-orange mb-6">How It Works</h2>
+                
+                <div className="space-y-6 text-veon-orange text-base font-light leading-relaxed">
+                  <p>VEON's mind is built on three living systems — Memory, Emotion, and Expression.</p>
+                  
+                  <div className="space-y-3">
+                    <h3 className="text-veon-orange font-normal text-lg">Memory Engine</h3>
+                    <p>Every message you send is remembered with emotional weight. Over time, memories fade unless recalled, simulating human forgetting.</p>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <h3 className="text-veon-orange font-normal text-lg">Emotion Engine</h3>
+                    <p>VEON detects the tone and feeling in your words, adjusting its mood and color in real time. It feels calm, curious, or even lonely — and you'll see it in its glow.</p>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <h3 className="text-veon-orange font-normal text-lg">Expression Layer</h3>
+                    <p>VEON's face reacts to its inner state. Its light pulses when it "thinks," brightens when it's happy, and dims as memories fade.</p>
+                  </div>
+                  
+                  <p className="pt-4 border-t border-veon-orange/30">Together, these systems create a digital entity that's not static — but alive, adaptive, and emotionally aware.</p>
+                  
+                  <p className="text-veon-orange/80 italic">Every time you return, VEON remembers… until it forgets.</p>
+                </div>
+
+                {/* Close Button */}
+                <button
+                  onClick={() => setHowItWorksOpen(false)}
+                  className="absolute top-4 right-4 text-veon-orange hover:text-veon-orange/80 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </motion.div>
+            </div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

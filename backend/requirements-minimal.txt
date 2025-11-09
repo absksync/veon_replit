@@ -1,0 +1,19 @@
+# Minimal requirements for chat functionality
+fastapi>=0.100.0
+uvicorn[standard]>=0.23.0
+python-multipart
+python-dotenv
+
+# Database
+sqlalchemy>=2.0.0
+aiosqlite
+
+# AI & LLM
+groq
+langchain
+langchain-groq
+
+# Utilities
+pydantic>=2.0.0
+httpx
+aiofiles

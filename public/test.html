@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>VEON API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .container {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #333;
+            border-radius: 5px;
+            white-space: pre-wrap;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            background: #333;
+            border: 1px solid #555;
+            color: #fff;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧠 VEON API Test</h1>
+        
+        <h2>Test 1: Load Profiles</h2>
+        <button onclick="testProfiles()">Test Profiles API</button>
+        
+        <h2>Test 2: Send Message</h2>
+        <input type="text" id="messageInput" placeholder="Type your message..." value="Hello!">
+        <button onclick="testSendMessage()">Test Send Message</button>
+        
+        <h2>Results:</h2>
+        <div id="result">Click a button to test...</div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        
+        function log(message, data = null) {
+            const resultDiv = document.getElementById('result');
+            const timestamp = new Date().toLocaleTimeString();
+            let text = `[${timestamp}] ${message}`;
+            if (data) {
+                text += '\n' + JSON.stringify(data, null, 2);
+            }
+            resultDiv.textContent = text + '\n\n' + resultDiv.textContent;
+            console.log(message, data);
+        }
+        
+        async function testProfiles() {
+            log('🔄 Testing profiles endpoint...');
+            try {
+                const response = await fetch(`${API_BASE}/api/profiles/`);
+                const data = await response.json();
+                log('✅ Profiles loaded:', data);
+            } catch (error) {
+                log('❌ Error loading profiles:', error.message);
+            }
+        }
+        
+        async function testSendMessage() {
+            const message = document.getElementById('messageInput').value;
+            log('📤 Sending message:', { message });
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/chat/send`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        profile_id: 1,
+                        user_id: 'test_user',
+                        message: message
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log('✅ Message sent successfully:', data);
+                } else {
+                    log('❌ Error from server:', data);
+                }
+            } catch (error) {
+                log('❌ Network error:', error.message);
+            }
+        }
+    </script>
+</body>
+</html>
