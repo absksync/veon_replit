@@ -25,10 +25,18 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS middleware
+# CORS middleware - Allow local development and Vercel deployments
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:3000"],  # Vite ports
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:5174", 
+        "http://localhost:5175",
+        "http://localhost:3000",
+        "https://*.vercel.app",  # All Vercel preview deployments
+        "https://veon.vercel.app",  # Production frontend
+        os.getenv("FRONTEND_URL", "")  # Custom domain from env
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

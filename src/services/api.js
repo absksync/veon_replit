@@ -1,7 +1,9 @@
 import axios from 'axios'
 
-// Backend API base URL - update this based on your backend server
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+// Backend API base URL - supports both local dev and production
+const API_BASE_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+
+console.log('🔗 API Base URL:', API_BASE_URL)
 
 // Create axios instance with default config
 const api = axios.create({
