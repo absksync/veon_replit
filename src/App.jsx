@@ -7,11 +7,14 @@ import './App.css'
 
 function App() {
   const [isHovered, setIsHovered] = useState(false)
+  const [isFaceHovered, setIsFaceHovered] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [aboutOpen, setAboutOpen] = useState(false)
   const [howItWorksOpen, setHowItWorksOpen] = useState(false)
   const [inputText, setInputText] = useState('')
+  const [userEmotion, setUserEmotion] = useState(null) // Track user's emotion
+  const [emotionTimeout, setEmotionTimeout] = useState(null) // Timeout for emotion persistence
   
   // Zustand store
   const {
@@ -43,6 +46,15 @@ function App() {
   useEffect(() => {
     loadProfiles()
   }, [])
+
+  // Cleanup emotion timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (emotionTimeout) {
+        clearTimeout(emotionTimeout)
+      }
+    }
+  }, [emotionTimeout])
 
   // Comprehensive sentiment analysis function with all expressions
   const analyzeSentiment = (text) => {
@@ -155,7 +167,34 @@ function App() {
   const handleInputChange = (e) => {
     const text = e.target.value
     setInputText(text)
-    // Don't analyze sentiment while typing - only when message is sent
+    
+    // Instant emotion detection - VEON reacts as you type
+    if (text.trim().length > 3) {
+      const detectedEmotion = analyzeSentiment(text)
+      if (detectedEmotion !== 'normal') {
+        // Store user's emotion and set it
+        setUserEmotion(detectedEmotion)
+        setEmotion(detectedEmotion)
+        
+        // Clear existing timeout
+        if (emotionTimeout) {
+          clearTimeout(emotionTimeout)
+        }
+        
+        // Keep this emotion visible for 5 seconds after user stops typing
+        const timeout = setTimeout(() => {
+          setUserEmotion(null)
+        }, 5000)
+        setEmotionTimeout(timeout)
+      }
+    } else if (text.trim().length === 0) {
+      // Reset to calm when input is cleared
+      setUserEmotion(null)
+      if (emotionTimeout) {
+        clearTimeout(emotionTimeout)
+      }
+      setEmotion('normal')
+    }
   }
   
   // Handle send message
@@ -174,12 +213,22 @@ function App() {
       }
     }
     
-    // Don't analyze user's message - let VEON's response set the emotion naturally
-    // This makes it more human-like - reacting to the conversation, not every input
+    // Keep user's emotion visible while AI processes and responds
+    // This makes the face react to YOUR sentiment for longer
+    if (userEmotion) {
+      // Extend the emotion display for another 3 seconds after sending
+      if (emotionTimeout) {
+        clearTimeout(emotionTimeout)
+      }
+      const timeout = setTimeout(() => {
+        setUserEmotion(null)
+      }, 3000)
+      setEmotionTimeout(timeout)
+    }
     
     try {
       await sendMessage(inputText)
-      setInputText('') // Clear input after sending - emotion will be updated by AI response
+      setInputText('') // Clear input after sending
     } catch (error) {
       console.error('Failed to send message:', error)
       console.error('Full error:', error)
@@ -217,112 +266,191 @@ function App() {
   }
 
   // Face component that changes based on emotion
-  const EmotionalFace = ({ emotion }) => {
-    // Eye shapes for ALL emotions - same size, different shapes
-    const getEyeShape = () => {
+  const EmotionalFace = ({ emotion, isHovered }) => {
+    // Get emotion-specific glow color
+    const getGlowColor = () => {
       switch(emotion) {
         case 'excited':
-          return { borderRadius: '50%', transform: 'scale(1)', left: '50%', right: '50%' }
-        case 'happy':
-          return { borderRadius: '50%', transform: 'scale(1)', left: '50%', right: '50%' }
-        case 'surprised':
-          return { borderRadius: '50%', transform: 'scale(1.1)', left: '50%', right: '50%' } // Wide open
-        case 'confused':
-          return { borderRadius: '50%', transform: 'scale(1)', left: '45%', right: '55%' } // Asymmetric
-        case 'thinking':
-          return { borderRadius: '50%', transform: 'translateY(-5px)', left: '50%', right: '50%' } // Raised
-        case 'worried':
-          return { borderRadius: '50% 50% 40% 40% / 60% 60% 40% 40%', transform: 'scale(1)', left: '50%', right: '50%' } // Raised worried
-        case 'sleepy':
-          return { borderRadius: '50%', transform: 'scaleY(0.3)', left: '50%', right: '50%' } // Half closed
-        case 'loving':
-          return { borderRadius: '50%', transform: 'scale(1)', left: '50%', right: '50%' } // Heart shape (will add hearts)
         case 'laughing':
-          return { borderRadius: '50%', transform: 'scaleY(0.4)', left: '50%', right: '50%' } // Squinting from laughing
-        case 'sad':
-          return { borderRadius: '50% 50% 50% 50% / 40% 40% 60% 60%', transform: 'scale(1)', left: '50%', right: '50%' } // Teardrop
-        case 'angry':
-          return { borderRadius: '50% 50% 50% 50% / 30% 30% 70% 70%', transform: 'scaleY(0.7)', left: '50%', right: '50%' } // Narrow
-        case 'mischievous':
-          return { borderRadius: '50%', transform: 'scale(1)', left: '80%', right: '30%' } // Wink (left closed, right open)
-        case 'embarrassed':
-          return { borderRadius: '50%', transform: 'scale(0.85)', left: '50%', right: '50%' } // Small shy eyes
-        case 'disgusted':
-          return { borderRadius: '50%', transform: 'scaleY(0.6)', left: '50%', right: '50%' } // Squinted disgust
+          return { color: 'rgba(255, 215, 0, 0.6)', name: 'bright gold' } // Bright gold
+        case 'happy':
         case 'proud':
-          return { borderRadius: '50%', transform: 'scale(1)', left: '50%', right: '50%' } // Confident eyes
+          return { color: 'rgba(255, 176, 0, 0.5)', name: 'soft orange' } // Soft orange
+        case 'sad':
+        case 'sleepy':
+          return { color: 'rgba(255, 140, 0, 0.3)', name: 'dim amber' } // Dim amber
+        case 'surprised':
+        case 'confused':
+          return { color: 'rgba(255, 200, 0, 0.5)', name: 'bright amber' } // Bright amber
+        case 'angry':
+        case 'disgusted':
+          return { color: 'rgba(255, 69, 0, 0.4)', name: 'deep red-orange' } // Deep red-orange
+        case 'loving':
+          return { color: 'rgba(255, 105, 180, 0.5)', name: 'warm pink' } // Warm pink
+        case 'thinking':
+        case 'worried':
+          return { color: 'rgba(255, 176, 0, 0.4)', name: 'soft orange' } // Soft orange
         default:
-          return { borderRadius: '50%', transform: 'scale(1)', left: '50%', right: '50%' }
+          return { color: 'rgba(255, 176, 0, 0.5)', name: 'calm orange' } // Calm orange
       }
     }
 
-    // Mouth SVG paths for ALL emotions
+    // Get emotion-specific blink rate
+    const getBlinkBehavior = () => {
+      switch(emotion) {
+        case 'excited':
+        case 'surprised':
+          return { duration: 0.1, repeatDelay: 1.5 } // Fast blinking
+        case 'sad':
+        case 'sleepy':
+          return { duration: 0.3, repeatDelay: 5 } // Very slow blinking
+        case 'angry':
+        case 'disgusted':
+          return { duration: 0, repeatDelay: 0 } // No blinking
+        default:
+          return { duration: 0.15, repeatDelay: 3 } // Normal blinking
+      }
+    }
+
+    // Get animation pulse speed based on emotion
+    const getPulseSpeed = () => {
+      switch(emotion) {
+        case 'excited':
+        case 'laughing':
+          return 0.8 // Quick pulsing
+        case 'sad':
+        case 'sleepy':
+          return 4 // Slow breathing
+        case 'angry':
+          return 1.2 // Irregular pulse
+        default:
+          return 2.5 // Gentle breathing
+      }
+    }
+    
+    // Eye shapes for ALL emotions - Cute expressive eyes
+    const getEyeShape = () => {
+      switch(emotion) {
+        case 'surprised':
+          return { borderRadius: '50%', scaleX: 1.2, scaleY: 1.2 } // Big round eyes
+        case 'angry':
+          return { borderRadius: '8px', scaleX: 1, scaleY: 0.5 } // Squeezed narrow
+        case 'sad':
+          return { borderRadius: '50% 50% 40% 40%', scaleX: 1, scaleY: 0.9 } // Droopy
+        case 'sleepy':
+          return { borderRadius: '12px', scaleX: 1, scaleY: 0.3 } // Half closed
+        case 'excited':
+        case 'happy':
+          return { borderRadius: '50%', scaleX: 1, scaleY: 1.1 } // Round happy eyes
+        default:
+          return { borderRadius: '12px', scaleX: 1, scaleY: 1 } // Normal cute square
+      }
+    }
+
+    // Mouth SVG paths for CUTE expressions
     const getMouthPath = () => {
       switch(emotion) {
         case 'excited':
-          return "M 20 5 Q 100 70, 180 5" // Big excited smile
+          // Big smile with visible teeth
+          return "M 30 30 Q 100 70, 170 30 L 170 40 Q 140 50, 100 52 Q 60 50, 30 40 Z M 60 45 L 140 45 L 140 48 L 60 48 Z"
         case 'happy':
-          return "M 20 20 Q 100 50, 180 20" // Normal smile
+          // Sweet smile - curved up
+          return "M 40 35 Q 100 60, 160 35"
         case 'surprised':
-          return "M 60 25 Q 100 60, 140 25 Q 100 50, 60 25" // Open O mouth
+          // Big round O mouth
+          return "M 70 35 Q 100 70, 130 35 Q 130 50, 100 60 Q 70 50, 70 35 Z"
         case 'confused':
-          return "M 20 30 Q 60 35, 100 25 Q 140 35, 180 30" // Wavy confused
+          // Wavy uncertain line
+          return "M 50 40 Q 70 45, 90 40 Q 110 35, 130 40 Q 150 45, 170 40"
         case 'thinking':
-          return "M 40 30 L 160 30" // Small straight line
+          // Small side mouth
+          return "M 80 40 Q 100 45, 120 40"
         case 'worried':
-          return "M 20 40 Q 100 25, 180 40" // Worried frown
+          // Upside down curve
+          return "M 50 45 Q 100 30, 150 45"
         case 'sleepy':
-          return "M 60 30 Q 100 40, 140 30" // Small yawn
+          // Small yawn
+          return "M 80 40 Q 100 50, 120 40 Q 120 48, 100 52 Q 80 48, 80 40 Z"
         case 'loving':
-          return "M 20 15 Q 100 60, 180 15" // Big warm smile
+          // Big sweet smile with heart shape
+          return "M 35 35 Q 100 65, 165 35 Q 140 45, 100 50 Q 60 45, 35 35 Z"
         case 'laughing':
-          return "M 20 5 Q 100 75, 180 5" // Huge laugh
+          // Huge grin with teeth showing
+          return "M 25 25 Q 100 75, 175 25 L 175 38 Q 140 55, 100 58 Q 60 55, 25 38 Z M 50 48 L 150 48 L 150 52 L 50 52 Z"
         case 'sad':
-          return "M 20 45 Q 100 10, 180 45" // Sad frown
+          // Downturned frown
+          return "M 50 50 Q 100 35, 150 50"
         case 'angry':
-          return "M 20 30 L 80 30 M 120 30 L 180 30" // Gritted teeth
+          // Gritted teeth - two rectangles
+          return "M 40 42 L 90 42 L 90 48 L 40 48 Z M 110 42 L 160 42 L 160 48 L 110 48 Z"
         case 'mischievous':
-          return "M 20 25 Q 60 35, 100 30 Q 140 25, 180 20" // Smirk
+          // Smirk to one side
+          return "M 40 42 Q 80 48, 120 42 Q 140 40, 160 38"
         case 'embarrassed':
-          return "M 40 35 Q 100 45, 160 35" // Small shy smile
+          // Small curved smile
+          return "M 60 42 Q 100 52, 140 42"
         case 'disgusted':
-          return "M 20 35 Q 60 25, 100 30 Q 140 25, 180 35" // Downturned disgust
+          // Wavy downturned
+          return "M 50 42 Q 75 35, 100 38 Q 125 35, 150 42"
         case 'proud':
-          return "M 20 25 Q 100 45, 180 25" // Confident smile
+          // Confident wide smile
+          return "M 35 38 Q 100 62, 165 38"
+        case 'friendly':
+          // Warm gentle smile
+          return "M 45 38 Q 100 58, 155 38"
+        case 'normal':
         default:
-          return "M 20 30 Q 100 35, 180 30" // Neutral
+          // Neutral cute smile
+          return "M 55 42 Q 100 52, 145 42"
       }
     }
 
     const eyeShape = getEyeShape()
+    const glowColor = getGlowColor()
+    const blinkBehavior = getBlinkBehavior()
+    const pulseSpeed = getPulseSpeed()
 
     return (
       <>
-        {/* Two eyes - fixed size, shape changes based on emotion */}
-        <div className="flex gap-24 mb-12 justify-center items-center">
-          {/* Left eye */}
+        {/* Two eyes - Expressive cute eyes with emotion-based sizing */}
+        <div className="flex gap-32 mb-16 justify-center items-center">
+          {/* Left eye - Winks when face is hovered */}
           <motion.div 
             key={`left-eye-${emotion}`}
-            className="bg-veon-orange w-20 h-20"
+            className="bg-veon-orange w-28 h-28"
             initial={false}
             animate={{
               borderRadius: eyeShape.borderRadius,
-              transform: eyeShape.transform,
-              scaleX: emotion === 'mischievous' ? 0.2 : 1, // Wink effect
+              // Wink only when hovered, otherwise use emotion-based scale
+              scaleX: eyeShape.scaleX,
+              scaleY: isHovered ? 0.05 : eyeShape.scaleY
             }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
+            transition={{ 
+              scaleY: { 
+                duration: 0.4,
+                ease: [0.43, 0.13, 0.23, 0.96]
+              },
+              scaleX: {
+                duration: 0.3,
+                ease: "easeOut"
+              }
+            }}
           />
 
-          {/* Right eye */}
+          {/* Right eye - Uses emotion-based scale */}
           <motion.div 
             key={`right-eye-${emotion}`}
-            className="bg-veon-orange w-20 h-20"
+            className="bg-veon-orange w-28 h-28"
             initial={false}
             animate={{
               borderRadius: eyeShape.borderRadius,
-              transform: eyeShape.transform,
+              scaleX: eyeShape.scaleX,
+              scaleY: eyeShape.scaleY
             }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
+            transition={{
+              duration: 0.3,
+              ease: "easeOut"
+            }}
           />
         </div>
 
@@ -336,12 +464,12 @@ function App() {
 
         {/* Mouth - path changes based on emotion */}
         <div className="flex justify-center">
-          <svg width="200" height="80" viewBox="0 0 200 80" className="mx-auto">
+          <svg width="260" height="100" viewBox="0 0 200 80" className="mx-auto">
             <motion.path
               key={`mouth-${emotion}`}
               d={getMouthPath()}
               stroke="#FFB000"
-              strokeWidth="5"
+              strokeWidth="6"
               fill="none"
               strokeLinecap="round"
               initial={false}
@@ -476,33 +604,39 @@ function App() {
       )}
 
       {/* Main content container */}
-      <div className="relative z-10 w-full flex flex-col items-center justify-center min-h-screen px-8">
+      <div className="relative z-10 w-full flex flex-col items-center min-h-screen px-8">
         
-        {/* AI Face - Simple circular eyes and smile */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 1.5, ease: 'easeOut' }}
-          className="mb-16 relative"
-        >
-          {/* Static ambient glow - no animation */}
-          <div
-            className="absolute inset-0 -m-20 rounded-full opacity-20 blur-3xl"
-            style={{
-              background: 'radial-gradient(circle, rgba(255,176,0,0.2) 0%, transparent 70%)',
-            }}
-          />
-          <div className="relative">
-            <EmotionalFace emotion={currentEmotion} />
+        {/* AI Face - Static, no movement or glow */}
+        <div className="pt-52">
+          <div className="mb-16 relative" style={{ transform: 'scale(1.3)' }}>
+          <div 
+            className="relative cursor-pointer"
+            onMouseEnter={() => setIsFaceHovered(true)}
+            onMouseLeave={() => setIsFaceHovered(false)}
+          >
+            {/* Prioritize user's emotion, then AI's emotion */}
+            <EmotionalFace 
+              emotion={
+                userEmotion ? userEmotion : // Show user's sentiment first
+                (isLoading || isProcessing ? 'normal' : currentEmotion) // Then AI's emotion
+              } 
+              isHovered={isFaceHovered}
+            />
           </div>
-        </motion.div>
+        </div>
+        </div>
 
+        {/* Spacer to push chat to bottom */}
+        <div className="flex-1" />
+
+        {/* Chat interface - Bottom positioned */}
+        <div className="w-full flex flex-col items-center pb-20">
         {/* Tagline - Poetic hint text */}
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1, delay: 1 }}
-          className="text-veon-orange text-base mb-12 tracking-wide font-light"
+          className="text-veon-orange text-base mb-8 tracking-wide font-light"
         >
           VEON — Say hello… I'll remember you. For a while.
         </motion.p>
@@ -512,107 +646,101 @@ function App() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.8, duration: 1 }}
-          className="w-full max-w-2xl"
+          className="w-full max-w-5xl"
         >
           {/* Chat messages display */}
           {messages.length > 0 && (
-            <div className="mb-4 max-h-48 overflow-y-auto space-y-3 px-4">
-              {messages.map((msg, index) => (
-                <motion.div
-                  key={msg.id || index}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[75%] px-4 py-2 rounded-xl ${
-                      msg.role === 'user'
-                        ? 'bg-veon-orange text-black'
-                        : 'bg-gray-800/50 backdrop-blur-sm text-white border border-gray-700'
-                    }`}
+            <div className="relative mb-4">
+              {/* Gradient fade overlay at top */}
+              <div className="absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-black via-black/50 to-transparent z-10 pointer-events-none" />
+              
+              <div className="max-h-72 overflow-y-auto space-y-3 px-4 pt-4">
+                {messages.map((msg, index) => (
+                  <motion.div
+                    key={msg.id || index}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    <p className="text-[15px]">{msg.content}</p>
-                    {msg.timestamp && (
-                      <p className="text-xs opacity-50 mt-1">
-                        {new Date(msg.timestamp).toLocaleTimeString()}
-                      </p>
-                    )}
-                  </div>
-                </motion.div>
-              ))}
+                    <div
+                      className={`max-w-[75%] px-4 py-2 rounded-xl ${
+                        msg.role === 'user'
+                          ? 'bg-veon-orange text-black'
+                          : 'bg-gray-800/50 backdrop-blur-sm text-white border border-gray-700'
+                      }`}
+                    >
+                      <p className="text-[15px]">{msg.content}</p>
+                      {msg.timestamp && (
+                        <p className="text-xs opacity-50 mt-1">
+                          {new Date(msg.timestamp).toLocaleTimeString()}
+                        </p>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
             </div>
           )}
 
           {/* Chat input container */}
-          <div className="relative flex items-center gap-4">
-            {/* Text input */}
-            <input
-              type="text"
-              placeholder={isLoading ? "VEON is thinking..." : "Type your message..."}
-              value={inputText}
-              onChange={handleInputChange}
-              onKeyPress={handleKeyPress}
-              disabled={isLoading || isProcessing}
-              className="flex-1 bg-gray-900/50 backdrop-blur-sm border-2 border-gray-800 rounded-full px-8 py-5 text-white text-lg placeholder-gray-500 focus:outline-none focus:border-veon-orange transition-colors disabled:opacity-50"
-            />
+          <div className="relative flex items-center">
+            {/* Text input with integrated buttons */}
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                placeholder={isLoading ? "VEON is thinking..." : "Type your message..."}
+                value={inputText}
+                onChange={handleInputChange}
+                onKeyPress={handleKeyPress}
+                disabled={isLoading || isProcessing}
+                className="w-full bg-gray-900/50 backdrop-blur-sm border-2 border-gray-800 rounded-full pl-8 pr-20 py-5 text-white text-lg placeholder-gray-500 focus:outline-none focus:border-veon-orange transition-colors disabled:opacity-50"
+              />
 
-            {/* Send button - visible when there's text */}
-            {inputText.trim() && (
-              <motion.button
-                onClick={handleSendMessage}
-                disabled={isLoading}
-                className="w-16 h-16 rounded-full bg-veon-orange flex items-center justify-center disabled:opacity-50"
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.95 }}
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                exit={{ scale: 0 }}
-              >
-                <svg 
-                  className="w-7 h-7 text-black" 
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
-              </motion.button>
-            )}
-
-            {/* Mic button - visible when there's no text */}
-            {!inputText.trim() && (
-              <motion.button
-                onClick={handleMicClick}
-                disabled={isProcessing}
-                className={`relative w-16 h-16 rounded-full flex items-center justify-center transition-colors ${
-                  isRecording ? 'bg-red-500' : 'bg-veon-orange'
+              {/* Mic button - inside input on the right */}
+              <button
+                onClick={inputText.trim() ? handleSendMessage : handleMicClick}
+                disabled={isLoading || isProcessing}
+                className={`absolute right-2 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full flex items-center justify-center transition-all hover:opacity-90 ${
+                  inputText.trim() 
+                    ? 'bg-veon-orange' 
+                    : isRecording 
+                      ? 'bg-red-500 animate-pulse' 
+                      : 'bg-veon-orange'
                 } disabled:opacity-50`}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.95 }}
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                exit={{ scale: 0 }}
               >
-                {/* Mic SVG icon */}
-                <svg 
-                  className="w-7 h-7 text-black" 
-                  fill="currentColor" 
-                  viewBox="0 0 24 24"
-                >
-                  {isRecording ? (
-                    // Stop icon when recording
-                    <rect x="6" y="6" width="12" height="12" rx="2" />
-                  ) : (
-                    // Mic icon when not recording
-                    <>
-                      <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
-                      <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
-                    </>
-                  )}
-                </svg>
+                {/* Icon changes based on state */}
+                {inputText.trim() ? (
+                  // Send icon when there's text
+                  <svg 
+                    className="w-6 h-6 text-black" 
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
+                ) : (
+                  // Mic icon when no text
+                  <svg 
+                    className="w-6 h-6 text-black" 
+                    fill="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    {isRecording ? (
+                      // Stop icon when recording
+                      <rect x="6" y="6" width="12" height="12" rx="2" />
+                    ) : (
+                      // Mic icon when not recording
+                      <>
+                        <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                        <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                      </>
+                    )}
+                  </svg>
+                )}
                 
                 {/* Recording indicator */}
-                {isRecording && (
+                {isRecording && !inputText.trim() && (
                   <motion.div
                     className="absolute inset-0 rounded-full border-4 border-red-500"
                     animate={{
@@ -622,8 +750,8 @@ function App() {
                     transition={{ duration: 1.5, repeat: Infinity }}
                   />
                 )}
-              </motion.button>
-            )}
+              </button>
+            </div>
           </div>
           
           {/* Processing indicator */}
@@ -638,6 +766,7 @@ function App() {
           )}
 
         </motion.div>
+        </div>
 
       </div>
 
@@ -662,7 +791,7 @@ function App() {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
-                className="w-full max-w-md bg-black border border-veon-orange/30 rounded-2xl p-8 pointer-events-auto"
+                className="w-full max-w-3xl bg-black border border-veon-orange/30 rounded-2xl p-8 pointer-events-auto"
               >
                 <h2 className="text-2xl font-normal text-veon-orange mb-6">Memory Settings</h2>
               
@@ -793,7 +922,7 @@ function App() {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
-                className="w-full max-w-lg bg-black border border-veon-orange/30 rounded-2xl p-8 pointer-events-auto"
+                className="w-full max-w-3xl bg-black border border-veon-orange/30 rounded-2xl p-8 pointer-events-auto"
               >
                 <h2 className="text-2xl font-normal text-veon-orange mb-6">About VEON</h2>
                 
@@ -845,7 +974,7 @@ function App() {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
-                className="w-full max-w-lg bg-black border border-veon-orange/30 rounded-2xl p-8 pointer-events-auto max-h-[80vh] overflow-y-auto"
+                className="w-full max-w-3xl bg-black border border-veon-orange/30 rounded-2xl p-8 pointer-events-auto max-h-[80vh] overflow-y-auto"
               >
                 <h2 className="text-2xl font-normal text-veon-orange mb-6">How It Works</h2>
                 

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import List, Optional
@@ -31,7 +31,11 @@ class ChatResponse(BaseModel):
 
 
 @router.post("/send", response_model=ChatResponse)
-async def send_message(request: ChatRequest, db: Session = Depends(get_db)):
+async def send_message(
+    request: ChatRequest, 
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
     """Send a message to the AI and get a response"""
     
     # Get AI profile
@@ -96,8 +100,13 @@ async def send_message(request: ChatRequest, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(ai_message)
     
-    # Extract and save new memories with emotional analysis
-    await ai_service.extract_memories(request.message, request.user_id)
+    # Extract and save new memories in background (non-blocking)
+    # This happens after response is sent to user for faster UX
+    background_tasks.add_task(
+        ai_service.extract_memories,
+        request.message,
+        request.user_id
+    )
     
     return ai_message
 
