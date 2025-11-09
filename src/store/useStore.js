@@ -55,6 +55,17 @@ export const useStore = create((set, get) => ({
     } catch (error) {
       console.error('❌ Failed to load profiles:', error)
       console.error('Error details:', error.response?.data || error.message)
+      
+      // Demo mode: Create a default profile when backend is unavailable
+      const demoProfile = {
+        id: 1,
+        name: 'VEON Demo',
+        personality: 'friendly and helpful AI assistant',
+        voice_id: 'demo',
+        avatar_url: null
+      }
+      set({ profiles: [demoProfile], currentProfile: demoProfile, isGuestMode: true })
+      console.log('🎭 Running in DEMO MODE - backend unavailable')
     }
   },
   

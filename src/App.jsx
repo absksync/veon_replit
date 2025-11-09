@@ -42,9 +42,12 @@ function App() {
     transcribeAudio,
   } = useVoiceRecording()
   
-  // Load profiles on mount
+  // Load profiles on mount (with error handling for offline/demo mode)
   useEffect(() => {
-    loadProfiles()
+    loadProfiles().catch(error => {
+      console.log('⚠️ Backend not available - running in demo mode')
+      // Demo mode works without backend
+    })
   }, [])
 
   // Cleanup emotion timeout on unmount
